@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import shutil
 import tempfile
 from datetime import date
 from pathlib import Path
@@ -231,30 +232,51 @@ def convert_to_pdf(in_docx_path: Path, out_pdf_path: Path) -> None:
     else:
         soffice_candidates = ["soffice", "/usr/bin/soffice"]
 
-    for exe in soffice_candidates:
-        p = Path(exe)
-        if p.is_absolute() and not p.exists():
-            continue
-        try:
-            subprocess.run(
-                [
-                    exe,
-                    "--headless",
-                    "--convert-to", "pdf",
-                    "--outdir", str(out_pdf_path.parent),
-                    str(in_docx_path),
-                ],
-                check=True,
-                capture_output=True,
-                timeout=60,
-            )
-            generated = out_pdf_path.parent / (in_docx_path.stem + ".pdf")
-            if generated.exists():
-                if generated != out_pdf_path:
-                    generated.rename(out_pdf_path)
-                return
-        except (subprocess.CalledProcessError, FileNotFoundError, OSError, subprocess.TimeoutExpired):
-            continue
+    # 导出参数：嵌入字体、无损/高质量图像，减少版式错乱
+    pdf_export_opts = {
+        "EmbedStandardFonts": {"type": "boolean", "value": "true"},
+        "UseLosslessCompression": {"type": "boolean", "value": "true"},
+        "Quality": {"type": "long", "value": "100"},
+        "ReduceImageResolution": {"type": "boolean", "value": "false"},
+    }
+    convert_to_spec = "pdf:writer_pdf_Export:" + json.dumps(pdf_export_opts, separators=(",", ":"))
+
+    profile_dir = tempfile.mkdtemp(prefix="lo_pdf_")
+    try:
+        profile_uri = Path(profile_dir).as_uri()
+        for exe in soffice_candidates:
+            p = Path(exe)
+            if p.is_absolute() and not p.exists():
+                continue
+            try:
+                subprocess.run(
+                    [
+                        exe,
+                        "--headless",
+                        "--invisible",
+                        "--nologo",
+                        "--nofirststartwizard",
+                        f"-env:UserInstallation={profile_uri}",
+                        "--convert-to",
+                        convert_to_spec,
+                        "--outdir",
+                        str(out_pdf_path.parent),
+                        str(in_docx_path),
+                    ],
+                    check=True,
+                    capture_output=True,
+                    timeout=90,
+                    cwd=str(in_docx_path.parent),
+                )
+                generated = out_pdf_path.parent / (in_docx_path.stem + ".pdf")
+                if generated.exists():
+                    if generated != out_pdf_path:
+                        generated.rename(out_pdf_path)
+                    return
+            except (subprocess.CalledProcessError, FileNotFoundError, OSError, subprocess.TimeoutExpired):
+                continue
+    finally:
+        shutil.rmtree(profile_dir, ignore_errors=True)
 
     raise RuntimeError(
         "PDF 转换失败：未安装 docx2pdf（依赖本机 Word）或 LibreOffice。"
