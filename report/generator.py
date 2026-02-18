@@ -199,26 +199,28 @@ def convert_to_pdf(in_docx_path: Path, out_pdf_path: Path) -> None:
     """
     将 docx 转为 PDF。
     Windows 优先使用 docx2pdf（调用本机 Word），否则尝试 LibreOffice。
+    Linux/macOS 仅使用 LibreOffice（docx2pdf 依赖 Word，仅支持 Windows）。
     """
     if not in_docx_path.exists():
         raise FileNotFoundError(f"源 docx 不存在: {in_docx_path}")
 
     out_pdf_path.parent.mkdir(parents=True, exist_ok=True)
 
-    # 1. 尝试 docx2pdf
-    try:
-        from docx2pdf import convert as docx2pdf_convert
-        docx2pdf_convert(str(in_docx_path), str(out_pdf_path))
-        return
-    except ImportError:
-        pass
-    except Exception as e:
-        raise RuntimeError(f"docx2pdf 转换失败: {e}") from e
-
-    # 2. 尝试 LibreOffice
     import platform
     import subprocess
 
+    # 1. 仅在 Windows 上尝试 docx2pdf（依赖本机 Word；Linux/macOS 会直接报错）
+    if platform.system() == "Windows":
+        try:
+            from docx2pdf import convert as docx2pdf_convert
+            docx2pdf_convert(str(in_docx_path), str(out_pdf_path))
+            return
+        except ImportError:
+            pass
+        except Exception as e:
+            pass  # 失败则 fallback 到 LibreOffice
+
+    # 2. 使用 LibreOffice（Windows/macOS/Linux 通用，云端已安装）
     if platform.system() == "Windows":
         soffice_candidates = [
             r"C:\Program Files\LibreOffice\program\soffice.exe",
