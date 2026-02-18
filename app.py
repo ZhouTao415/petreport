@@ -10,6 +10,7 @@ import streamlit as st
 
 from report.config import (
     CONCLUSION_LEVEL_OPTIONS,
+    ORG_ABBREV,
     ORG_NAME,
     OUTPUT_DIR,
     PET_GENDER_OPTIONS,
@@ -25,6 +26,15 @@ from report.generator import (
     make_report_no,
     render_docx,
 )
+
+
+def _safe_report_no() -> str:
+    """获取报告编号，失败时返回当日占位编号，避免云端刷新后因写文件失败导致页面空白。"""
+    try:
+        return make_report_no()
+    except Exception:
+        return f"LS{ORG_ABBREV}{date.today().strftime('%Y%m%d')}-W-01"
+
 
 st.set_page_config(page_title="狂犬病毒抗体检测报告", layout="wide")
 
@@ -43,7 +53,7 @@ with st.form("report_form", clear_on_submit=False):
     st.subheader("基本信息")
     col1, col2 = st.columns(2)
     with col1:
-        report_no = st.text_input("报告编号（自动生成）", value=make_report_no(), disabled=True)
+        report_no = st.text_input("报告编号（自动生成）", value=_safe_report_no(), disabled=True)
         client_name = st.text_input("客户姓名 *", placeholder="请输入客户姓名", max_chars=50)
         client_address = st.text_input("客户地址", placeholder="请输入地址", max_chars=200)
     with col2:

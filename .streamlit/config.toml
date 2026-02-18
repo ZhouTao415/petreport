@@ -1,0 +1,10 @@
+# Streamlit 配置（含云端部署优化）
+# 解决「首次加载正常，刷新或再次打开后页面空白」的常见问题
+
+[server]
+# 关闭 WebSocket 压缩，避免部分代理/云端环境剥离 Sec-WebSocket-Extensions 导致连接异常
+enableWebsocketCompression = false
+# 若仍出现空白，可尝试临时关闭 CORS 排查：enableCORS = false
+
+[browser]
+gatherUsageStats = false
