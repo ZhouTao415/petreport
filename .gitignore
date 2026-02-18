@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+.eggs/
+*.egg
+
+# Virtual envs
+.venv/
+.venv_build/
+venv/
+ENV/
+
+# PyInstaller
+build/
+dist/
+*.spec
+
+# Build outputs
+PetReport_Offline/
+
+# Runtime data
+data/
+outputs/
+report_counter.json
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env & logs
+.env
+*.log
